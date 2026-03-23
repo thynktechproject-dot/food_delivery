@@ -59,25 +59,27 @@ public class SecurityConfig {
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/auth/login",
-                                "/api/auth/register/user",
-                            "/api/auth/register/admin",
-                                "/api/auth/refresh",
-                                "/api/auth/logout"
-                        )
-                        .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/", "/index.html")
-                        .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/public/**")
-                        .permitAll()
-                        .requestMatchers("/actuator/health/**", "/actuator/info")
-                        .permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
-                        .permitAll()
-                        .anyRequest()
-                        .authenticated());
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/auth/login",
+                        "/api/auth/register/user",
+                        "/api/auth/register/admin",
+                        "/api/auth/register/restaurant-owner",
+                        "/api/auth/register/delivery-agent",
+                        "/api/auth/refresh",
+                        "/api/auth/logout"
+                    )
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/", "/index.html")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/public/**")
+                    .permitAll()
+                    .requestMatchers("/actuator/health/**", "/actuator/info")
+                    .permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated());
 
         return http.build();
     }

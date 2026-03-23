@@ -27,6 +27,20 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+        @Override
+        public AuthResponse registerRestaurantOwner(CreateUserRequest request) {
+            return registerByRole(request, Role.RESTAURANT_OWNER);
+        }
+
+        @Override
+        public AuthResponse registerDeliveryAgent(CreateUserRequest request) {
+            return registerByRole(request, Role.DELIVERY_AGENT);
+        }
+    @Override
+    public boolean adminExists() {
+        return userRepository.countByRoleAndDeletedAtIsNull(Role.ADMIN) > 0;
+    }
+
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
@@ -39,7 +53,6 @@ public class AuthServiceImpl implements AuthService {
         return registerByRole(request, resolveRegisterUserRole(request));
     }
 
-
     @Override
     public AuthResponse registerAdmin(CreateUserRequest request) {
         return registerByRole(request, Role.ADMIN);
@@ -50,11 +63,11 @@ public class AuthServiceImpl implements AuthService {
             return Role.USER;
         }
 
-        if (request.getRole() == Role.ADMIN) {
-            throw new BadRequestException("Public registration is only available for USER, RESTAURANT_OWNER, or DELIVERY_AGENT accounts");
+        if (request.getRole() != Role.USER) {
+            throw new BadRequestException("Public registration is only available for USER accounts");
         }
 
-        return request.getRole();
+        return Role.USER;
     }
 
     private AuthResponse registerByRole(CreateUserRequest request, Role role) {
@@ -122,16 +135,16 @@ public class AuthServiceImpl implements AuthService {
 
     private AuthResponse buildAuthResponse(User user) {
         Role role = user.getRole() != null ? user.getRole() : Role.USER;
-        String token = jwtUtil.generateToken(user.getEmail(), user.getTokenVersion(), role.name());
+        String token = jwtUtil.generateToken(user.getEmail(), role.name(), user.getTokenVersion());
         String refreshToken = issueRefreshToken(user.getId());
 
         return AuthResponse.builder()
-                .token(token)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .role(role.name())
-                .user(UserMapper.toResponse(user))
-                .build();
+            .token(token)
+            .refreshToken(refreshToken)
+            .tokenType("Bearer")
+            .role(role.name())
+            .user(UserMapper.toResponse(user))
+            .build();
     }
 
     private String issueRefreshToken(Long userId) {

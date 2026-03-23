@@ -14,11 +14,9 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-
 public class JwtUtil {
 
     private static final String TOKEN_VERSION_CLAIM = "tv";
-    private static final String ROLE_CLAIM = "role";
 
     private final JwtProperties jwtProperties;
 
@@ -33,8 +31,11 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
     }
 
+    public String generateToken(String email, String role) {
+        return generateToken(email, role, 0);
+    }
 
-    public String generateToken(String email, int tokenVersion, String role) {
+    public String generateToken(String email, String role, int tokenVersion) {
         Date now = new Date();
         return Jwts.builder()
                 .setSubject(email)
@@ -43,18 +44,10 @@ public class JwtUtil {
                 .setExpiration(new Date(now.getTime() + jwtProperties.getExpirationMillis()))
                 .addClaims(Map.of(
                         TOKEN_VERSION_CLAIM, tokenVersion,
-                        ROLE_CLAIM, role
+                        "role", role
                 ))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
-    }
-
-    public String generateToken(String email, int tokenVersion) {
-        // Default to USER role if not specified
-        return generateToken(email, tokenVersion, "USER");
-    }
-    public String extractRole(String token) {
-        return getClaims(token).get(ROLE_CLAIM, String.class);
     }
 
     public String extractEmail(String token) {

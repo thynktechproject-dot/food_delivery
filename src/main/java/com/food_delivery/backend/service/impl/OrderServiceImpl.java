@@ -1,6 +1,5 @@
 package com.food_delivery.backend.service.impl;
 
-import com.food_delivery.backend.dto.DeliveryStatsResponse;
 import com.food_delivery.backend.dto.OrderResponse;
 import com.food_delivery.backend.dto.OrderItemResponse;
 import com.food_delivery.backend.entity.*;
@@ -21,7 +20,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -31,17 +29,6 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
-
-    /** Statuses that count as an "active" delivery in progress. */
-    private static final Set<OrderStatus> ACTIVE_DELIVERY_STATUSES = Set.of(
-            OrderStatus.PREPARING,
-            OrderStatus.OUT_FOR_DELIVERY
-    );
-
-    /** Statuses that appear in delivery history. */
-    private static final Set<OrderStatus> HISTORY_STATUSES = Set.of(
-            OrderStatus.DELIVERED
-    );
 
     @Override
     @Transactional
@@ -139,56 +126,13 @@ public class OrderServiceImpl implements OrderService {
                 .map(this::toResponse);
     }
 
-    /**
-     * Returns only orders that are currently in progress for the agent
-     * (PREPARING or OUT_FOR_DELIVERY). Useful for the agent's live dashboard.
-     */
-    @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public Page<OrderResponse> getActiveOrdersByDeliveryAgentId(Long deliveryAgentId, int page, int size) {
-        return orderRepository
-                .findByDeliveryAgentIdAndOrderStatusIn(deliveryAgentId, ACTIVE_DELIVERY_STATUSES, ordersPageable(page, size))
-                .map(this::toResponse);
-    }
-
-    /**
-     * Returns the agent's completed delivery history (DELIVERED orders only),
-     * sorted newest-first.
-     */
-    @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public Page<OrderResponse> getDeliveryHistoryByAgentId(Long deliveryAgentId, int page, int size) {
-        return orderRepository
-                .findByDeliveryAgentIdAndOrderStatusIn(deliveryAgentId, HISTORY_STATUSES, ordersPageable(page, size))
-                .map(this::toResponse);
-    }
-
-    /**
-     * Aggregated stats for a delivery agent's personal dashboard:
-     * total assigned, currently active, and total delivered.
-     */
-    @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public DeliveryStatsResponse getDeliveryStatsByAgentId(Long deliveryAgentId) {
-        long totalAssigned = orderRepository.countByDeliveryAgentIdAndOrderStatusIn(
-                deliveryAgentId, Set.of(OrderStatus.values()));
-        long activeDeliveries = orderRepository.countByDeliveryAgentIdAndOrderStatusIn(
-                deliveryAgentId, ACTIVE_DELIVERY_STATUSES);
-        long totalDelivered = orderRepository.countByDeliveryAgentIdAndOrderStatusIn(
-                deliveryAgentId, HISTORY_STATUSES);
-
-        return DeliveryStatsResponse.builder()
-                .totalAssigned(totalAssigned)
-                .activeDeliveries(activeDeliveries)
-                .totalDelivered(totalDelivered)
-                .build();
-    }
     @Override
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public Page<OrderResponse> getAllOrders(int page, int size) {
         return orderRepository.findAllBy(ordersPageable(page, size))
                 .map(this::toResponse);
     }
+
     @Override
     @Transactional
     public OrderResponse updateStatus(Long orderId, OrderStatus newStatus, String actorEmail) {
@@ -240,10 +184,6 @@ public class OrderServiceImpl implements OrderService {
         order.setDeliveryAgentId(deliveryAgentId);
         return toResponse(orderRepository.save(order));
     }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
 
     private Order getOrderOrThrow(Long orderId) {
         return orderRepository.findById(orderId)

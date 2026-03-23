@@ -678,7 +678,6 @@ class SecurityHardeningIntegrationTests {
     }
 
         private String bearerToken(String email) {
-                // Use tokenVersion 0 and USER role by default for tests
-                return "Bearer " + jwtUtil.generateToken(email, 0, "USER");
+                return "Bearer " + jwtUtil.generateToken(email, "USER");
         }
 }

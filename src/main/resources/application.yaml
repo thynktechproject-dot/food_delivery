@@ -1,11 +1,13 @@
 spring:
   application:
     name: food_delivery
+  config:
+    import: optional:file:.env[.properties]
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/food_delivery
-    username: postgres
-    password: 123456
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     open-in-view: false
@@ -30,9 +32,9 @@ management:
 
 springdoc:
   api-docs:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}
   swagger-ui:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}
 
 logging:
   level:
@@ -41,15 +43,15 @@ logging:
 
 app:
   cors:
-    allowed-origins: http://localhost:3000,http://localhost:8080
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
   security:
     jwt:
-      secret: mySuperSecureSecretKeyThatIsAtLeast32BytesLong123
-      expiration-millis: 3600000
-      refresh-expiration-millis: 1209600000
-      issuer: food-delivery-app
+      secret: ${JWT_SECRET}
+      expiration-millis: ${JWT_EXPIRATION_MILLIS:3600000}
+      refresh-expiration-millis: ${JWT_REFRESH_EXPIRATION_MILLIS:1209600000}
+      issuer: ${JWT_ISSUER}
   bootstrap-admin:
-    enabled: false
-    name:
-    email:
-    password:
+    enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+    name: ${BOOTSTRAP_ADMIN_NAME:}
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
