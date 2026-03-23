@@ -19,6 +19,7 @@ public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
     private final MenuItemRepository menuRepository;
+    private final RestaurantRepository restaurantRepository;
 
     @Override
     public CartResponse addToCart(Long userId, AddToCartRequest request) {
@@ -105,6 +106,43 @@ public class CartServiceImpl implements CartService {
         if (cart.getItems().isEmpty()) {
             cart.setRestaurantId(null);
         }
+
+        return mapToResponse(cartRepository.save(cart));
+    }
+
+    @Override
+    public CartResponse updateItemQuantity(Long userId, Long menuItemId, int quantity) {
+
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
+
+        CartItem cartItem = cart.getItems().stream()
+                .filter(item -> item.getMenuItemId().equals(menuItemId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
+
+        cartItem.setQuantity(quantity);
+
+        return mapToResponse(cartRepository.save(cart));
+    }
+
+    @Override
+    public CartResponse changeRestaurant(Long userId, Long restaurantId) {
+
+        restaurantRepository.findByIdAndApprovedTrueAndActiveTrue(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
+
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseGet(() -> Cart.builder()
+                        .userId(userId)
+                        .items(new ArrayList<>())
+                        .build());
+
+        if (cart.getRestaurantId() != null && !cart.getRestaurantId().equals(restaurantId)) {
+            cart.getItems().clear();
+        }
+
+        cart.setRestaurantId(restaurantId);
 
         return mapToResponse(cartRepository.save(cart));
     }

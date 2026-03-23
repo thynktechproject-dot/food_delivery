@@ -677,7 +677,8 @@ class SecurityHardeningIntegrationTests {
         return objectMapper.readTree(responseBody);
     }
 
-    private String bearerToken(String email) {
-        return "Bearer " + jwtUtil.generateToken(email);
-    }
+        private String bearerToken(String email) {
+                // Use tokenVersion 0 and USER role by default for tests
+                return "Bearer " + jwtUtil.generateToken(email, 0, "USER");
+        }
 }
