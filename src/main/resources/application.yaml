@@ -3,14 +3,53 @@ spring:
     name: food_delivery
 
   datasource:
-    url: jdbc:postgresql://localhost:${DB_PORT}/${DB_NAME}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/food_delivery
+    username: postgres
+    password: root
 
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
 
   flyway:
     enabled: true
+    baseline-on-migrate: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.food_delivery.backend: INFO
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:8080
+  security:
+    jwt:
+      secret: mySuperSecureSecretKeyThatIsAtLeast32BytesLong123
+      expiration-millis: 3600000
+      refresh-expiration-millis: 1209600000
+      issuer: food-delivery-app
+  bootstrap-admin:
+    enabled: false
+    name:
+    email:
+    password:
