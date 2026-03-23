@@ -39,6 +39,7 @@ public class AuthServiceImpl implements AuthService {
         return registerByRole(request, resolveRegisterUserRole(request));
     }
 
+
     @Override
     public AuthResponse registerAdmin(CreateUserRequest request) {
         return registerByRole(request, Role.ADMIN);
@@ -49,11 +50,11 @@ public class AuthServiceImpl implements AuthService {
             return Role.USER;
         }
 
-        if (request.getRole() != Role.USER) {
-            throw new BadRequestException("Public registration is only available for USER accounts");
+        if (request.getRole() == Role.ADMIN) {
+            throw new BadRequestException("Public registration is only available for USER, RESTAURANT_OWNER, or DELIVERY_AGENT accounts");
         }
 
-        return Role.USER;
+        return request.getRole();
     }
 
     private AuthResponse registerByRole(CreateUserRequest request, Role role) {
@@ -120,9 +121,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private AuthResponse buildAuthResponse(User user) {
-        String token = jwtUtil.generateToken(user.getEmail(), user.getTokenVersion());
-        String refreshToken = issueRefreshToken(user.getId());
         Role role = user.getRole() != null ? user.getRole() : Role.USER;
+        String token = jwtUtil.generateToken(user.getEmail(), user.getTokenVersion(), role.name());
+        String refreshToken = issueRefreshToken(user.getId());
 
         return AuthResponse.builder()
                 .token(token)

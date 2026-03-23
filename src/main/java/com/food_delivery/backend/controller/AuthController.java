@@ -8,7 +8,6 @@ import com.food_delivery.backend.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +26,6 @@ public class AuthController {
     }
 
     @PostMapping("/register/admin")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody CreateUserRequest request) {
         return ResponseEntity.ok(authService.registerAdmin(request));
     }

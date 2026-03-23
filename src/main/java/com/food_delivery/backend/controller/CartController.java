@@ -3,6 +3,8 @@ package com.food_delivery.backend.controller;
 import com.food_delivery.backend.dto.AddToCartRequest;
 import com.food_delivery.backend.dto.ApiResponse;
 import com.food_delivery.backend.dto.CartResponse;
+import com.food_delivery.backend.dto.ChangeCartRestaurantRequest;
+import com.food_delivery.backend.dto.UpdateCartItemRequest;
 import com.food_delivery.backend.service.UserService;
 import com.food_delivery.backend.service.CartService;
 import jakarta.validation.Valid;
@@ -53,6 +55,33 @@ public class CartController {
                 .success(true)
                 .message("Item removed")
                 .data(cartService.removeItem(userId, menuItemId))
+                .build();
+    }
+
+    @PutMapping("/item/{menuItemId}")
+    public ApiResponse<CartResponse> updateItemQuantity(
+            Authentication authentication,
+            @PathVariable Long menuItemId,
+            @Valid @RequestBody UpdateCartItemRequest request
+    ) {
+        Long userId = resolveCurrentUserId(authentication);
+        return ApiResponse.<CartResponse>builder()
+                .success(true)
+                .message("Cart item updated")
+                .data(cartService.updateItemQuantity(userId, menuItemId, request.getQuantity()))
+                .build();
+    }
+
+    @PutMapping("/restaurant")
+    public ApiResponse<CartResponse> changeRestaurant(
+            Authentication authentication,
+            @Valid @RequestBody ChangeCartRestaurantRequest request
+    ) {
+        Long userId = resolveCurrentUserId(authentication);
+        return ApiResponse.<CartResponse>builder()
+                .success(true)
+                .message("Cart restaurant changed")
+                .data(cartService.changeRestaurant(userId, request.getRestaurantId()))
                 .build();
     }
 

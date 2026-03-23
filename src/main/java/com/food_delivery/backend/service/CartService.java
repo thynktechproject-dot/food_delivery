@@ -10,5 +10,9 @@ public interface CartService {
 
     CartResponse removeItem(Long userId, Long menuItemId);
 
+    CartResponse updateItemQuantity(Long userId, Long menuItemId, int quantity);
+
+    CartResponse changeRestaurant(Long userId, Long restaurantId);
+
     void clearCart(Long userId);
 }

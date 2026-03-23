@@ -23,6 +23,10 @@ public enum Role {
                 .replace(' ', '_')
                 .toUpperCase(Locale.ROOT);
 
+        if ("DELIVERY_BOY".equals(normalized)) {
+            return DELIVERY_AGENT;
+        }
+
         try {
             return Role.valueOf(normalized);
         } catch (IllegalArgumentException ex) {
