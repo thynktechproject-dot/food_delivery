@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/food_delivery
     username: postgres
-    password: root
+    password: 123456
 
   jpa:
     open-in-view: false

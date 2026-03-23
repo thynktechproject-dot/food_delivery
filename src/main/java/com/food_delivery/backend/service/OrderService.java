@@ -1,5 +1,6 @@
 package com.food_delivery.backend.service;
 
+import com.food_delivery.backend.dto.DeliveryStatsResponse;
 import com.food_delivery.backend.dto.OrderResponse;
 import com.food_delivery.backend.entity.OrderStatus;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,15 @@ public interface OrderService {
     Page<OrderResponse> getOrdersByRestaurantOwner(Long ownerId, int page, int size);
 
     Page<OrderResponse> getOrdersByDeliveryAgentId(Long deliveryAgentId, int page, int size);
+
+    /** Returns only orders currently in-progress for the given delivery agent. */
+    Page<OrderResponse> getActiveOrdersByDeliveryAgentId(Long deliveryAgentId, int page, int size);
+
+    /** Returns completed (DELIVERED) orders for the given delivery agent. */
+    Page<OrderResponse> getDeliveryHistoryByAgentId(Long deliveryAgentId, int page, int size);
+
+    /** Summary statistics for a delivery agent's own dashboard. */
+    DeliveryStatsResponse getDeliveryStatsByAgentId(Long deliveryAgentId);
 
     OrderResponse updateStatus(Long orderId, OrderStatus newStatus, String actorEmail);
 
