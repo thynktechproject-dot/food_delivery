@@ -11,6 +11,6 @@ public class RestaurantResponse {
     private String name;
     private String location;
     private String cuisineType;
-    private boolean approved;
+    private String status;
     private boolean active;
 }

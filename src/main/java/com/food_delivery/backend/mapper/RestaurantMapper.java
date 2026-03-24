@@ -20,7 +20,7 @@ public class RestaurantMapper {
                 .name(restaurant.getName())
                 .location(restaurant.getLocation())
                 .cuisineType(restaurant.getCuisineType())
-                .approved(restaurant.isApproved())
+                .status(restaurant.getStatus().name())
                 .active(restaurant.isActive())
                 .build();
     }
