@@ -7,9 +7,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
@@ -46,6 +46,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
 	@EntityGraph(attributePaths = "items")
 	Optional<Order> findByIdAndDeliveryAgentId(Long id, Long deliveryAgentId);
+
+	// Added: filter assigned orders by a set of statuses — used for active/history views
+	Page<Order> findByDeliveryAgentIdAndOrderStatusIn(
+			Long deliveryAgentId,
+			Collection<OrderStatus> statuses,
+			Pageable pageable
+	);
 
 	long countByOrderStatus(OrderStatus orderStatus);
 
