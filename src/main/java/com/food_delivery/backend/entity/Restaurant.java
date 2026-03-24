@@ -6,6 +6,8 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.food_delivery.backend.enums.RestaurantStatus;
+
 @Entity
 @Table(name = "restaurants")
 @Getter
@@ -32,9 +34,10 @@ public class Restaurant {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean approved = false;
+    @Builder.Default
+    private RestaurantStatus status = RestaurantStatus.PENDING;
 
     @Builder.Default
     @Column(nullable = false)

@@ -2,6 +2,7 @@ package com.food_delivery.backend.service.impl;
 
 import com.food_delivery.backend.dto.*;
 import com.food_delivery.backend.entity.*;
+import com.food_delivery.backend.enums.RestaurantStatus;
 import com.food_delivery.backend.exception.BadRequestException;
 import com.food_delivery.backend.exception.ResourceNotFoundException;
 import com.food_delivery.backend.repository.*;
@@ -44,7 +45,7 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
 
         if (menuItem.getRestaurant() == null
-                || !menuItem.getRestaurant().isApproved()
+                || menuItem.getRestaurant().getStatus() != RestaurantStatus.APPROVED
                 || !menuItem.getRestaurant().isActive()) {
             throw new BadRequestException("Menu item belongs to a restaurant that is not available");
         }

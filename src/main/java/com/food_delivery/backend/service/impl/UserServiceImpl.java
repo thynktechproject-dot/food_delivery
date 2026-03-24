@@ -3,6 +3,7 @@ package com.food_delivery.backend.service.impl;
 import com.food_delivery.backend.dto.*;
 import com.food_delivery.backend.entity.OrderStatus;
 import com.food_delivery.backend.entity.User;
+import com.food_delivery.backend.enums.RestaurantStatus;
 import com.food_delivery.backend.entity.Role;
 import com.food_delivery.backend.exception.*;
 import com.food_delivery.backend.mapper.UserMapper;
@@ -234,8 +235,8 @@ public class UserServiceImpl implements UserService {
         dashboard.put("activeUsers", userRepository.countByActiveTrueAndDeletedAtIsNull());
         dashboard.put("deliveryAgents", userRepository.countByRoleAndDeletedAtIsNull(Role.DELIVERY_AGENT));
         dashboard.put("totalRestaurants", restaurantRepository.countByActiveTrue());
-        dashboard.put("approvedRestaurants", restaurantRepository.countByApprovedAndActiveTrue(true));
-        dashboard.put("pendingRestaurants", restaurantRepository.countByApprovedAndActiveTrue(false));
+        dashboard.put("approvedRestaurants", restaurantRepository.countByStatusAndActiveTrue(RestaurantStatus.APPROVED));
+        dashboard.put("pendingRestaurants", restaurantRepository.countByStatusAndActiveTrue(RestaurantStatus.PENDING));
         dashboard.put("totalOrders", orderRepository.count());
 
         Map<String, Long> orderStatusCounts = new HashMap<>();

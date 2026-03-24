@@ -4,20 +4,22 @@ import com.food_delivery.backend.dto.*;
 
 public interface AuthService {
 
-        AuthResponse registerRestaurantOwner(CreateUserRequest request);
-        AuthResponse registerDeliveryAgent(CreateUserRequest request);
-    /**
-     * Returns true if at least one admin exists in the system.
-     */
-    boolean adminExists();
+	AuthResponse registerRestaurantOwner(CreateUserRequest request);
 
-    AuthResponse registerUser(CreateUserRequest request);
+	AuthResponse registerDeliveryAgent(CreateUserRequest request);
 
-    AuthResponse registerAdmin(CreateUserRequest request);
+	/**
+	 * Returns true if at least one admin exists in the system.
+	 */
+	boolean adminExists();
 
-    AuthResponse login(LoginRequest request);
+	AuthResponse registerUser(CreateUserRequest request);
 
-    AuthResponse refresh(RefreshTokenRequest request);
+	AuthResponse registerAdmin(CreateUserRequest request);
 
-    void logout(RefreshTokenRequest request);
+	AuthResponse login(LoginRequest request);
+
+	AuthResponse refresh(RefreshTokenRequest request);
+
+	void logout(RefreshTokenRequest request);
 }

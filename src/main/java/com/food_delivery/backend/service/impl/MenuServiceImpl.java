@@ -2,6 +2,7 @@ package com.food_delivery.backend.service.impl;
 
 import com.food_delivery.backend.dto.*;
 import com.food_delivery.backend.entity.*;
+import com.food_delivery.backend.enums.RestaurantStatus;
 import com.food_delivery.backend.exception.ForbiddenException;
 import com.food_delivery.backend.exception.ResourceNotFoundException;
 import com.food_delivery.backend.mapper.MenuMapper;
@@ -46,7 +47,9 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public List<MenuItemResponse> getPublicMenu(Long restaurantId) {
-        Restaurant restaurant = restaurantRepository.findByIdAndApprovedTrueAndActiveTrue(restaurantId)
+
+        Restaurant restaurant = restaurantRepository
+                .findByIdAndStatusAndActiveTrue(restaurantId, RestaurantStatus.APPROVED)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         return menuRepository.findByRestaurantIdAndAvailableTrue(restaurant.getId())
@@ -64,12 +67,16 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public MenuItemResponse getPublicMenuItem(Long menuItemId) {
+
         MenuItem item = getMenuItemOrThrow(menuItemId);
+
         if (!item.isAvailable()
                 || item.getRestaurant() == null
-                || !restaurantRepository.findByIdAndApprovedTrueAndActiveTrue(item.getRestaurant().getId()).isPresent()) {
+                || item.getRestaurant().getStatus() != RestaurantStatus.APPROVED
+                || !item.getRestaurant().isActive()) {
             throw new ResourceNotFoundException("Menu item not found");
         }
+
         return MenuMapper.toResponse(item);
     }
 
