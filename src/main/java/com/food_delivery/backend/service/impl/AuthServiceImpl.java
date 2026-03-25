@@ -35,6 +35,16 @@ public class AuthServiceImpl implements AuthService {
     private final JwtProperties jwtProperties;
 
     @Override
+    public AuthResponse registerRestaurantOwner(CreateUserRequest request) {
+        return registerByRole(request, Role.RESTAURANT_OWNER);
+    }
+
+    @Override
+    public AuthResponse registerDeliveryAgent(CreateUserRequest request) {
+        return registerByRole(request, Role.DELIVERY_AGENT);
+    }
+
+    @Override
     public AuthResponse registerUser(CreateUserRequest request) {
         return registerByRole(request, resolveRegisterUserRole(request));
     }

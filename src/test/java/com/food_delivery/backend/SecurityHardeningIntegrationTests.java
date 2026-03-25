@@ -69,7 +69,7 @@ class SecurityHardeningIntegrationTests {
         mockMvc.perform(post("/api/auth/register/admin")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false));
     }
 

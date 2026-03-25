@@ -4,6 +4,10 @@ import com.food_delivery.backend.dto.*;
 
 public interface AuthService {
 
+    AuthResponse registerRestaurantOwner(CreateUserRequest request);
+
+    AuthResponse registerDeliveryAgent(CreateUserRequest request);
+
     AuthResponse registerUser(CreateUserRequest request);
 
     AuthResponse registerAdmin(CreateUserRequest request);
