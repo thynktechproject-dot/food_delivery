@@ -11,9 +11,12 @@ import com.food_delivery.backend.exception.ForbiddenException;
 import com.food_delivery.backend.exception.ResourceNotFoundException;
 import com.food_delivery.backend.repository.OrderRepository;
 import com.food_delivery.backend.repository.PaymentRepository;
-import com.food_delivery.backend.service.PaymentService;
-import com.razorpay.RazorpayClient;
+import com.food_delivery.backend.notification.NotificationService;
+import com.food_delivery.backend.repository.RestaurantRepository;
+import com.food_delivery.backend.repository.UserRepository;
 import com.razorpay.RazorpayException;
+import com.razorpay.RazorpayClient;
+import com.food_delivery.backend.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
@@ -34,6 +37,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final UserRepository userRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final NotificationService notificationService;
     private final RazorpayClient razorpayClient;
     private final RazorpayProperties razorpayProperties;
 
@@ -64,11 +70,20 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BadRequestException("Only newly created orders can be paid");
         }
 
-        // If a PENDING payment already exists (user reopened the page), reuse it
-        return paymentRepository.findByOrderId(orderId)
-                .filter(p -> p.getStatus() == PaymentStatus.PENDING)
-                .map(existing -> buildRazorpayOrderResponse(order, existing))
-                .orElseGet(() -> createNewRazorpayOrder(order));
+        Payment existingPayment = paymentRepository.findByOrderId(orderId).orElse(null);
+
+        if (existingPayment != null && existingPayment.getStatus() == PaymentStatus.SUCCESS) {
+            throw new ConflictException("Payment has already been completed for this order");
+        }
+
+        // Reuse pending Razorpay order if the user retries payment.
+        if (existingPayment != null
+                && existingPayment.getStatus() == PaymentStatus.PENDING
+                && existingPayment.getRazorpayOrderId() != null) {
+            return buildRazorpayOrderResponse(order, existingPayment);
+        }
+
+        return createNewRazorpayOrder(order);
     }
 
     private RazorpayOrderResponse createNewRazorpayOrder(Order order) {
@@ -173,6 +188,10 @@ public class PaymentServiceImpl implements PaymentService {
         paymentRepository.save(payment);
         orderRepository.save(order);
 
+        if (signatureValid) {
+            sendPaidNotifications(order, payment);
+        }
+
         if (!signatureValid) {
             throw new BadRequestException("Payment verification failed. Invalid signature.");
         }
@@ -241,6 +260,10 @@ public class PaymentServiceImpl implements PaymentService {
 
             paymentRepository.save(payment);
             orderRepository.save(order);
+
+            if ("payment.captured".equals(eventType)) {
+                sendPaidNotifications(order, payment);
+            }
         });
     }
 
@@ -312,5 +335,18 @@ public class PaymentServiceImpl implements PaymentService {
                 .createdAt(payment.getCreatedAt())
                 .updatedAt(payment.getUpdatedAt())
                 .build();
+    }
+
+    private void sendPaidNotifications(Order order, Payment payment) {
+        User user = userRepository.findByIdAndDeletedAtIsNull(order.getUserId()).orElse(null);
+        Restaurant restaurant = restaurantRepository.findById(order.getRestaurantId()).orElse(null);
+
+        if (user != null) {
+            notificationService.notifyUserOrderPaid(user, order, payment);
+        }
+
+        if (restaurant != null && restaurant.getOwner() != null && user != null) {
+            notificationService.notifyRestaurantOrderPaid(restaurant, user, order, payment);
+        }
     }
 }

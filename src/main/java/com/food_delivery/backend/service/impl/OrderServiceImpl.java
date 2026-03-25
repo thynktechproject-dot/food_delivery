@@ -14,6 +14,7 @@ import com.food_delivery.backend.repository.RestaurantRepository;
 import com.food_delivery.backend.repository.UserRepository;
 import com.food_delivery.backend.service.OrderService;
 import com.food_delivery.backend.util.PagingUtils;
+import com.food_delivery.backend.notification.NotificationService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ public class OrderServiceImpl implements OrderService {
 	private final OrderRepository orderRepository;
 	private final UserRepository userRepository;
 	private final RestaurantRepository restaurantRepository;
+	private final NotificationService notificationService;
 
 	/** Statuses that count as an "active" delivery in progress. */
 	private static final Set<OrderStatus> ACTIVE_DELIVERY_STATUSES = Set.of(OrderStatus.PREPARING,
@@ -72,6 +74,8 @@ public class OrderServiceImpl implements OrderService {
 		cart.getItems().clear();
 		cart.setRestaurantId(null);
 		cartRepository.save(cart);
+
+	// (Notifications for user and restaurant owner are now sent after payment)
 
 		return toResponse(savedOrder);
 	}
@@ -180,7 +184,17 @@ public class OrderServiceImpl implements OrderService {
 		validateTransition(order, actor, newStatus);
 
 		order.setOrderStatus(newStatus);
-		return toResponse(orderRepository.save(order));
+		Order savedOrder = orderRepository.save(order);
+
+		// Notify user if delivered
+		if (newStatus == OrderStatus.DELIVERED) {
+			User user = userRepository.findByIdAndDeletedAtIsNull(order.getUserId()).orElse(null);
+			if (user != null) {
+				notificationService.notifyUserOrderDelivered(user.getEmail(), "Order ID: " + order.getId());
+			}
+		}
+
+		return toResponse(savedOrder);
 	}
 
 	@Override
@@ -216,7 +230,17 @@ public class OrderServiceImpl implements OrderService {
 		}
 
 		order.setDeliveryAgentId(deliveryAgentId);
-		return toResponse(orderRepository.save(order));
+		Order savedOrder = orderRepository.save(order);
+
+
+		// Notify delivery agent with all details
+		User user = userRepository.findByIdAndDeletedAtIsNull(order.getUserId()).orElse(null);
+		Restaurant restaurant = restaurantRepository.findById(order.getRestaurantId()).orElse(null);
+		if (deliveryAgent != null && user != null && restaurant != null) {
+			notificationService.notifyDeliveryAgentAssigned(deliveryAgent, order, user, restaurant);
+		}
+
+		return toResponse(savedOrder);
 	}
 
 	// -------------------------------------------------------------------------
