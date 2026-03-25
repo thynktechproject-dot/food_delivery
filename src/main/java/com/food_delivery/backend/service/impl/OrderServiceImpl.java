@@ -234,9 +234,9 @@ public class OrderServiceImpl implements OrderService {
 
 
 		// Notify delivery agent with all details
-		if (deliveryAgent != null) {
-			User user = userRepository.findByIdAndDeletedAtIsNull(order.getUserId()).orElse(null);
-			Restaurant restaurant = restaurantRepository.findById(order.getRestaurantId()).orElse(null);
+		User user = userRepository.findByIdAndDeletedAtIsNull(order.getUserId()).orElse(null);
+		Restaurant restaurant = restaurantRepository.findById(order.getRestaurantId()).orElse(null);
+		if (deliveryAgent != null && user != null && restaurant != null) {
 			notificationService.notifyDeliveryAgentAssigned(deliveryAgent, order, user, restaurant);
 		}
 

@@ -1,5 +1,6 @@
 package com.food_delivery.backend.notification;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -12,10 +13,16 @@ public class EmailNotificationService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Value("${spring.mail.username:}")
+    private String fromEmail;
+
     public void sendEmail(String to, String subject, String htmlContent) {
         MimeMessage message = mailSender.createMimeMessage();
         try {
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            if (fromEmail != null && !fromEmail.isBlank()) {
+                helper.setFrom(fromEmail);
+            }
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true); // true = isHtml

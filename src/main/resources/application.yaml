@@ -68,3 +68,9 @@ app:
     name: ${BOOTSTRAP_ADMIN_NAME:}
     email: ${BOOTSTRAP_ADMIN_EMAIL:}
     password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID}
+    key-secret: ${RAZORPAY_KEY_SECRET}
+    currency: ${RAZORPAY_CURRENCY:INR}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
