@@ -7,6 +7,7 @@ import com.food_delivery.backend.exception.ForbiddenException;
 import com.food_delivery.backend.exception.ResourceNotFoundException;
 import com.food_delivery.backend.repository.*;
 import com.food_delivery.backend.service.PaymentService;
+import com.food_delivery.backend.notification.NotificationService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final UserRepository userRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -59,8 +63,19 @@ public class PaymentServiceImpl implements PaymentService {
         Payment savedPayment = paymentRepository.save(payment);
 
         order.setOrderStatus(success ? OrderStatus.PAID : OrderStatus.FAILED);
-
         orderRepository.save(order);
+
+        // Send notifications only if payment succeeded
+        if (success) {
+            User user = userRepository.findByIdAndDeletedAtIsNull(order.getUserId()).orElse(null);
+            Restaurant restaurant = restaurantRepository.findById(order.getRestaurantId()).orElse(null);
+            if (user != null) {
+                notificationService.notifyUserOrderPaid(user, order);
+            }
+            if (restaurant != null && restaurant.getOwner() != null) {
+                notificationService.notifyRestaurantOrderPaid(restaurant, user, order);
+            }
+        }
 
         return toResponse(savedPayment);
     }
