@@ -11,9 +11,10 @@ import java.util.List;
 public class RecentOrderResponse {
 
     private Long orderId;
-    private Long userId;
+    private String customerName;
     private List<String> items;
     private double totalAmount;
-    private String status;
+    private String orderStatus;
+    private String paymentStatus;
     private LocalDateTime createdAt;
 }

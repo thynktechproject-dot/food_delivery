@@ -13,6 +13,7 @@ import com.food_delivery.backend.exception.ResourceNotFoundException;
 import com.food_delivery.backend.mapper.OrderMapper;
 import com.food_delivery.backend.repository.CartRepository;
 import com.food_delivery.backend.repository.OrderRepository;
+import com.food_delivery.backend.repository.PaymentRepository;
 import com.food_delivery.backend.repository.RestaurantRepository;
 import com.food_delivery.backend.repository.UserRepository;
 import com.food_delivery.backend.service.OrderService;
@@ -38,6 +39,7 @@ public class OrderServiceImpl implements OrderService {
 	private final UserRepository userRepository;
 	private final RestaurantRepository restaurantRepository;
 	private final NotificationService notificationService;
+	private final PaymentRepository paymentRepository;
 
 	/** Statuses that count as an "active" delivery in progress. */
 	private static final Set<OrderStatus> ACTIVE_DELIVERY_STATUSES = Set.of(OrderStatus.PREPARING,
@@ -79,7 +81,7 @@ public class OrderServiceImpl implements OrderService {
 		cart.setRestaurantId(null);
 		cartRepository.save(cart);
 
-	// (Notifications for user and restaurant owner are now sent after payment)
+		// (Notifications for user and restaurant owner are now sent after payment)
 
 		return toResponse(savedOrder);
 	}
@@ -236,7 +238,6 @@ public class OrderServiceImpl implements OrderService {
 		order.setDeliveryAgentId(deliveryAgentId);
 		Order savedOrder = orderRepository.save(order);
 
-
 		// Notify delivery agent with all details
 		User user = userRepository.findByIdAndDeletedAtIsNull(order.getUserId()).orElse(null);
 		Restaurant restaurant = restaurantRepository.findById(order.getRestaurantId()).orElse(null);
@@ -362,65 +363,55 @@ public class OrderServiceImpl implements OrderService {
 				.totalAmount(order.getTotalAmount()).status(order.getOrderStatus().name())
 				.createdAt(order.getCreatedAt()).updatedAt(order.getUpdatedAt()).items(items).build();
 	}
-	
-	// LIVE ORDERS
+
 	@Override
 	public List<LiveOrderResponse> getLiveOrders(Long restaurantId) {
 
-	  
-	    if (restaurantId == null || restaurantId <= 0) {
-	        throw new BadRequestException("Invalid restaurantId");
-	    }
+		if (restaurantId == null || restaurantId <= 0) {
+			throw new BadRequestException("Invalid restaurantId");
+		}
 
-	    
-	    if (!restaurantRepository.existsById(restaurantId)) {
-	        throw new ResourceNotFoundException(
-	                "Restaurant not found with id: " + restaurantId
-	        );
-	    }
+		if (!restaurantRepository.existsById(restaurantId)) {
+			throw new ResourceNotFoundException("Restaurant not found");
+		}
 
-	    List<OrderStatus> activeStatuses = List.of(
-	            OrderStatus.CREATED,
-	            OrderStatus.CONFIRMED,
-	            OrderStatus.PREPARING
-	    );
+		List<OrderStatus> activeStatuses = List.of(OrderStatus.CREATED, OrderStatus.CONFIRMED, OrderStatus.PREPARING);
 
-	    List<Order> orders = orderRepository
-	            .findByRestaurantIdAndOrderStatusIn(restaurantId, activeStatuses);
-
-	    return orders.stream()
-	            .map(OrderMapper::toLiveOrderResponse)
-	            .toList();
+		return orderRepository.findByRestaurantIdAndOrderStatusIn(restaurantId, activeStatuses).stream().map(order -> {
+			String customerName = getCustomerName(order.getUserId());
+			return OrderMapper.toLiveOrderResponse(order, customerName);
+		}).toList();
 	}
 
-    // RECENT ORDERS
+	@Transactional
 	@Override
 	public List<RecentOrderResponse> getRecentOrders(Long restaurantId) {
 
-	    if (restaurantId == null || restaurantId <= 0) {
-	        throw new BadRequestException("Invalid restaurantId");
-	    }
+		if (restaurantId == null || restaurantId <= 0) {
+			throw new BadRequestException("Invalid restaurantId");
+		}
 
-	    if (!restaurantRepository.existsById(restaurantId)) {
-	        throw new ResourceNotFoundException(
-	                "Restaurant not found with id: " + restaurantId
-	        );
-	    }
+		if (!restaurantRepository.existsById(restaurantId)) {
+			throw new ResourceNotFoundException("Restaurant not found");
+		}
 
-	    List<OrderStatus> completedStatuses = List.of(
-	            OrderStatus.DELIVERED,
-	            OrderStatus.CANCELLED
-	    );
+		List<OrderStatus> completedStatuses = List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
 
-	    return orderRepository
-	            .findByRestaurantIdAndOrderStatusIn(
-	                    restaurantId,
-	                    completedStatuses,
-	                    PageRequest.of(0, 10, Sort.by("createdAt").descending())
-	            )
-	            .getContent()
-	            .stream()
-	            .map(OrderMapper::toRecentOrderResponse)
-	            .toList();
+		return orderRepository.findByRestaurantIdAndOrderStatusIn(restaurantId, completedStatuses,
+				PageRequest.of(0, 10, Sort.by("createdAt").descending())).getContent().stream().map(order -> {
+
+					Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
+
+					String customerName = getCustomerName(order.getUserId());
+
+					return OrderMapper.toRecentOrderResponse(order, payment, customerName);
+				}).toList();
+	}
+
+	
+	private String getCustomerName(Long userId) {
+
+		return userRepository.findById(userId).map(user -> user.getName())
+				.orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 	}
 }
