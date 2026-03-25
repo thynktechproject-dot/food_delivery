@@ -2,9 +2,12 @@ package com.food_delivery.backend.controller;
 
 import com.food_delivery.backend.dto.AuthResponse;
 import com.food_delivery.backend.dto.CreateUserRequest;
+import com.food_delivery.backend.dto.GenerateOtpRequest;
+import com.food_delivery.backend.dto.GenerateOtpResponse;
 import com.food_delivery.backend.dto.LoginRequest;
 import com.food_delivery.backend.dto.RefreshTokenRequest;
 import com.food_delivery.backend.service.AuthService;
+import com.food_delivery.backend.service.OtpService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +23,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final OtpService otpService;
+
+    @PostMapping("/register/restaurant-owner")
+    public ResponseEntity<AuthResponse> registerRestaurantOwner(@Valid @RequestBody CreateUserRequest request) {
+        return ResponseEntity.ok(authService.registerRestaurantOwner(request));
+    }
+
+    @PostMapping("/register/delivery-agent")
+    public ResponseEntity<AuthResponse> registerDeliveryAgent(@Valid @RequestBody CreateUserRequest request) {
+        return ResponseEntity.ok(authService.registerDeliveryAgent(request));
+    }
 
     @PostMapping("/register/user")
     public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody CreateUserRequest request) {
@@ -46,5 +60,10 @@ public class AuthController {
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authService.logout(request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/generate-otp")
+    public ResponseEntity<GenerateOtpResponse> generateOtp(@Valid @RequestBody GenerateOtpRequest request) {
+        return ResponseEntity.ok(otpService.generateOtp(request));
     }
 }

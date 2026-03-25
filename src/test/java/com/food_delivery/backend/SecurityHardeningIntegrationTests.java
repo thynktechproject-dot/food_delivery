@@ -12,6 +12,7 @@ import com.food_delivery.backend.entity.User;
 import com.food_delivery.backend.repository.CartRepository;
 import com.food_delivery.backend.repository.MenuItemRepository;
 import com.food_delivery.backend.repository.OrderRepository;
+import com.food_delivery.backend.repository.OtpCodeRepository;
 import com.food_delivery.backend.repository.RefreshTokenRepository;
 import com.food_delivery.backend.repository.RestaurantRepository;
 import com.food_delivery.backend.repository.UserRepository;
@@ -26,47 +27,26 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SecurityHardeningIntegrationTests {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private RestaurantRepository restaurantRepository;
-
-    @Autowired
-    private MenuItemRepository menuItemRepository;
-
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private CartRepository cartRepository;
-
-    @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtUtil jwtUtil;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private UserRepository userRepository;
+    @Autowired private RestaurantRepository restaurantRepository;
+    @Autowired private MenuItemRepository menuItemRepository;
+    @Autowired private OrderRepository orderRepository;
+    @Autowired private CartRepository cartRepository;
+    @Autowired private RefreshTokenRepository refreshTokenRepository;
+    @Autowired private OtpCodeRepository otpCodeRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private JwtUtil jwtUtil;
 
     @BeforeEach
     void cleanDatabase() {
@@ -75,6 +55,7 @@ class SecurityHardeningIntegrationTests {
         cartRepository.deleteAll();
         menuItemRepository.deleteAll();
         restaurantRepository.deleteAll();
+        otpCodeRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -679,5 +660,51 @@ class SecurityHardeningIntegrationTests {
 
     private String bearerToken(String email) {
         return "Bearer " + jwtUtil.generateToken(email);
+    }
+
+    @Test
+    void generateOtpReturnsSixDigitOtpForUser() throws Exception {
+        saveUser("customer@test.com", Role.USER, true);
+
+        String response = mockMvc.perform(post("/api/auth/generate-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "customer@test.com",
+                                  "role": "USER"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.identifier").value("customer@test.com"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode json = objectMapper.readTree(response);
+        assertTrue(json.get("otp").asText().matches("\\d{6}"));
+    }
+
+    @Test
+    void generateOtpReturnsSixDigitOtpForRestaurantOwner() throws Exception {
+        saveUser("owner@test.com", Role.RESTAURANT_OWNER, true);
+
+        String response = mockMvc.perform(post("/api/auth/generate-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "owner@test.com",
+                                  "role": "RESTAURANT_OWNER"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("RESTAURANT_OWNER"))
+                .andExpect(jsonPath("$.identifier").value("owner@test.com"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode json = objectMapper.readTree(response);
+        assertTrue(json.get("otp").asText().matches("\\d{6}"));
     }
 }
