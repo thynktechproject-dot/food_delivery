@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 public class LiveOrderResponse {
 
     private Long orderId;
-    private Long userId;
-    private String status;
+    private String customerName;
+    private String orderStatus;
     private LocalDateTime createdAt;
 }

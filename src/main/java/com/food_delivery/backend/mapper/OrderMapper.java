@@ -3,32 +3,38 @@ package com.food_delivery.backend.mapper;
 import com.food_delivery.backend.dto.LiveOrderResponse;
 import com.food_delivery.backend.dto.RecentOrderResponse;
 import com.food_delivery.backend.entity.Order;
+import com.food_delivery.backend.entity.Payment;
 
-import java.util.stream.Collectors;
+import java.util.List;
 
 public class OrderMapper {
 
-    // LIVE ORDER MAPPING
-    public static LiveOrderResponse toLiveOrderResponse(Order order) {
+    
+    public static LiveOrderResponse toLiveOrderResponse(Order order, String customerName) {
         return LiveOrderResponse.builder()
                 .orderId(order.getId())
-                .userId(order.getUserId())
-                .status(order.getOrderStatus().name())
+                .customerName(customerName)
+                .orderStatus(order.getOrderStatus().name())
                 .createdAt(order.getCreatedAt())
                 .build();
     }
 
-    // RECENT ORDER MAPPING
-    public static RecentOrderResponse toRecentOrderResponse(Order order) {
+    
+    public static RecentOrderResponse toRecentOrderResponse(
+            Order order,
+            Payment payment,
+            String customerName
+    ) {
         return RecentOrderResponse.builder()
                 .orderId(order.getId())
-                .userId(order.getUserId())
+                .customerName(customerName)
                 .items(order.getItems()
                         .stream()
-                        .map(item -> item.getName()) // adjust if field differs
-                        .collect(Collectors.toList()))
+                        .map(item -> item.getName())
+                        .toList())
                 .totalAmount(order.getTotalAmount())
-                .status(order.getOrderStatus().name())
+                .orderStatus(order.getOrderStatus().name())
+                .paymentStatus(payment != null ? payment.getStatus().name() : "PENDING")
                 .createdAt(order.getCreatedAt())
                 .build();
     }
