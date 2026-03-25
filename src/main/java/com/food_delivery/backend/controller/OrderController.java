@@ -1,11 +1,16 @@
 package com.food_delivery.backend.controller;
 
 import com.food_delivery.backend.dto.ApiResponse;
+import com.food_delivery.backend.dto.LiveOrderResponse;
 import com.food_delivery.backend.dto.OrderResponse;
+import com.food_delivery.backend.dto.RecentOrderResponse;
 import com.food_delivery.backend.entity.OrderStatus;
 import com.food_delivery.backend.service.OrderService;
 import com.food_delivery.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -72,6 +77,40 @@ public class OrderController {
 
     private Long resolveCurrentUserId(Authentication authentication) {
         return userService.getUserByEmail(authentication.getName()).getId();
+    }
+    
+ // LIVE ORDER QUEUE
+    @GetMapping("/live")
+    @PreAuthorize("hasAnyRole('ADMIN','RESTAURANT_OWNER')")
+    public ApiResponse<List<LiveOrderResponse>> getLiveOrders(
+            @RequestParam Long restaurantId
+    ) {
+
+        List<LiveOrderResponse> liveOrders =
+                orderService.getLiveOrders(restaurantId);
+
+        return ApiResponse.<List<LiveOrderResponse>>builder()
+                .success(true)
+                .message("Live orders fetched successfully")
+                .data(liveOrders)
+                .build();
+    }
+
+    // RECENT ORDERS
+    @GetMapping("/recent")
+    @PreAuthorize("hasAnyRole('ADMIN','RESTAURANT_OWNER')")
+    public ApiResponse<List<RecentOrderResponse>> getRecentOrders(
+            @RequestParam Long restaurantId
+    ) {
+
+        List<RecentOrderResponse> recentOrders =
+                orderService.getRecentOrders(restaurantId);
+
+        return ApiResponse.<List<RecentOrderResponse>>builder()
+                .success(true)
+                .message("Recent orders fetched successfully")
+                .data(recentOrders)
+                .build();
     }
 
 }

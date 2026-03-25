@@ -1,8 +1,13 @@
 package com.food_delivery.backend.service;
 
 import com.food_delivery.backend.dto.DeliveryStatsResponse;
+import com.food_delivery.backend.dto.LiveOrderResponse;
 import com.food_delivery.backend.dto.OrderResponse;
+import com.food_delivery.backend.dto.RecentOrderResponse;
 import com.food_delivery.backend.entity.OrderStatus;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 
 public interface OrderService {
@@ -39,4 +44,8 @@ public interface OrderService {
     void cancelOrderByAdmin(Long orderId);
 
     OrderResponse assignDeliveryAgent(Long orderId, Long deliveryAgentId);
+    
+    List<LiveOrderResponse> getLiveOrders(Long restaurantId);
+
+    List<RecentOrderResponse> getRecentOrders(Long restaurantId);
 }

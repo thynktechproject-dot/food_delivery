@@ -1,13 +1,16 @@
 package com.food_delivery.backend.service.impl;
 
 import com.food_delivery.backend.dto.DeliveryStatsResponse;
+import com.food_delivery.backend.dto.LiveOrderResponse;
 import com.food_delivery.backend.dto.OrderResponse;
+import com.food_delivery.backend.dto.RecentOrderResponse;
 import com.food_delivery.backend.dto.OrderItemResponse;
 import com.food_delivery.backend.entity.*;
 import com.food_delivery.backend.enums.RestaurantStatus;
 import com.food_delivery.backend.exception.BadRequestException;
 import com.food_delivery.backend.exception.ForbiddenException;
 import com.food_delivery.backend.exception.ResourceNotFoundException;
+import com.food_delivery.backend.mapper.OrderMapper;
 import com.food_delivery.backend.repository.CartRepository;
 import com.food_delivery.backend.repository.OrderRepository;
 import com.food_delivery.backend.repository.RestaurantRepository;
@@ -18,6 +21,7 @@ import com.food_delivery.backend.notification.NotificationService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -357,5 +361,66 @@ public class OrderServiceImpl implements OrderService {
 				.restaurantId(order.getRestaurantId()).deliveryAgentId(order.getDeliveryAgentId())
 				.totalAmount(order.getTotalAmount()).status(order.getOrderStatus().name())
 				.createdAt(order.getCreatedAt()).updatedAt(order.getUpdatedAt()).items(items).build();
+	}
+	
+	// LIVE ORDERS
+	@Override
+	public List<LiveOrderResponse> getLiveOrders(Long restaurantId) {
+
+	  
+	    if (restaurantId == null || restaurantId <= 0) {
+	        throw new BadRequestException("Invalid restaurantId");
+	    }
+
+	    
+	    if (!restaurantRepository.existsById(restaurantId)) {
+	        throw new ResourceNotFoundException(
+	                "Restaurant not found with id: " + restaurantId
+	        );
+	    }
+
+	    List<OrderStatus> activeStatuses = List.of(
+	            OrderStatus.CREATED,
+	            OrderStatus.CONFIRMED,
+	            OrderStatus.PREPARING
+	    );
+
+	    List<Order> orders = orderRepository
+	            .findByRestaurantIdAndOrderStatusIn(restaurantId, activeStatuses);
+
+	    return orders.stream()
+	            .map(OrderMapper::toLiveOrderResponse)
+	            .toList();
+	}
+
+    // RECENT ORDERS
+	@Override
+	public List<RecentOrderResponse> getRecentOrders(Long restaurantId) {
+
+	    if (restaurantId == null || restaurantId <= 0) {
+	        throw new BadRequestException("Invalid restaurantId");
+	    }
+
+	    if (!restaurantRepository.existsById(restaurantId)) {
+	        throw new ResourceNotFoundException(
+	                "Restaurant not found with id: " + restaurantId
+	        );
+	    }
+
+	    List<OrderStatus> completedStatuses = List.of(
+	            OrderStatus.DELIVERED,
+	            OrderStatus.CANCELLED
+	    );
+
+	    return orderRepository
+	            .findByRestaurantIdAndOrderStatusIn(
+	                    restaurantId,
+	                    completedStatuses,
+	                    PageRequest.of(0, 10, Sort.by("createdAt").descending())
+	            )
+	            .getContent()
+	            .stream()
+	            .map(OrderMapper::toRecentOrderResponse)
+	            .toList();
 	}
 }
