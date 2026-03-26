@@ -5,6 +5,8 @@ import com.food_delivery.backend.service.MenuService;
 import com.food_delivery.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/menu")
 @RequiredArgsConstructor
+@Slf4j
 public class MenuController {
 
     private final MenuService menuService;
@@ -27,6 +30,8 @@ public class MenuController {
             Authentication authentication
     ) {
         Long ownerId = resolveCurrentUserId(authentication);
+        log.info("Adding menu item to restaurantId={} by ownerId={}", restaurantId, ownerId);
+
         return ApiResponse.<MenuItemResponse>builder()
                 .success(true)
                 .message("Menu item added")
@@ -38,6 +43,8 @@ public class MenuController {
     @PreAuthorize("hasRole('RESTAURANT_OWNER')")
     public ApiResponse<List<MenuItemResponse>> getMenu(@PathVariable Long restaurantId, Authentication authentication) {
         Long ownerId = resolveCurrentUserId(authentication);
+        log.info("Fetching menu for restaurantId={} by ownerId={}", restaurantId, ownerId);
+
         return ApiResponse.<List<MenuItemResponse>>builder()
                 .success(true)
                 .message("Menu fetched")
@@ -49,6 +56,8 @@ public class MenuController {
     @PreAuthorize("hasRole('RESTAURANT_OWNER')")
     public ApiResponse<MenuItemResponse> getMenuItem(@PathVariable Long menuItemId, Authentication authentication) {
         Long ownerId = resolveCurrentUserId(authentication);
+        log.info("Fetching menuItemId={} by ownerId={}", menuItemId, ownerId);
+
         return ApiResponse.<MenuItemResponse>builder()
                 .success(true)
                 .message("Menu item fetched")
@@ -64,6 +73,8 @@ public class MenuController {
             Authentication authentication
     ) {
         Long ownerId = resolveCurrentUserId(authentication);
+        log.info("Updating menuItemId={} by ownerId={}", menuItemId, ownerId);
+
         return ApiResponse.<MenuItemResponse>builder()
                 .success(true)
                 .message("Menu item updated")
@@ -79,6 +90,9 @@ public class MenuController {
             Authentication authentication
     ) {
         Long ownerId = resolveCurrentUserId(authentication);
+        log.info("Updating availability for menuItemId={} to {} by ownerId={}",
+                menuItemId, request.getAvailable(), ownerId);
+
         return ApiResponse.<MenuItemResponse>builder()
                 .success(true)
                 .message("Menu item availability updated")
@@ -90,7 +104,10 @@ public class MenuController {
     @PreAuthorize("hasRole('RESTAURANT_OWNER')")
     public ApiResponse<String> deleteMenuItem(@PathVariable Long menuItemId, Authentication authentication) {
         Long ownerId = resolveCurrentUserId(authentication);
+        log.warn("Deleting menuItemId={} by ownerId={}", menuItemId, ownerId);
+
         menuService.deleteMenuItem(menuItemId, ownerId);
+
         return ApiResponse.<String>builder()
                 .success(true)
                 .message("Menu item deleted")
@@ -99,6 +116,8 @@ public class MenuController {
     }
 
     private Long resolveCurrentUserId(Authentication authentication) {
-        return userService.getUserByEmail(authentication.getName()).getId();
+        Long userId = userService.getUserByEmail(authentication.getName()).getId();
+        log.debug("Resolved userId={} from authentication", userId);
+        return userId;
     }
 }
