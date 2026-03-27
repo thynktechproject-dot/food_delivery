@@ -37,21 +37,25 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional
     public ReviewResponse submitReview(Long userId, CreateReviewRequest request) {
 
-        // 1. Order must exist and belong to this user
+        log.info("Submitting review for userId: {}, orderId: {}", userId, request.getOrderId());
+
         Order order = orderRepository.findByIdAndUserId(request.getOrderId(), userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
-        // 2. Order must be DELIVERED — can't review before delivery is complete
+        log.debug("Order fetched with status: {}", order.getOrderStatus());
+
         if (order.getOrderStatus() != OrderStatus.DELIVERED) {
+            log.warn("Review attempted before delivery completion for orderId: {}", request.getOrderId());
             throw new BadRequestException("You can only review after your order has been delivered");
         }
 
-        // 3. Validate the target actually exists and is related to this order
         validateTarget(request, order);
 
-        // 4. Prevent duplicate review for the same order + target
+        log.debug("Target validated for reviewType: {}, targetId: {}", request.getReviewType(), request.getTargetId());
+
         if (reviewRepository.existsByUserIdAndReviewTypeAndTargetIdAndOrderId(
                 userId, request.getReviewType(), request.getTargetId(), request.getOrderId())) {
+            log.warn("Duplicate review attempt by userId: {}, orderId: {}", userId, request.getOrderId());
             throw new ConflictException("You have already reviewed this for the selected order");
         }
 
@@ -65,14 +69,20 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
 
         Review saved = reviewRepository.save(review);
+
         log.info("Review submitted by user {} for {} id {}", userId, request.getReviewType(), request.getTargetId());
+
         return toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ReviewResponse> getReviewsForTarget(ReviewType reviewType, Long targetId, int page, int size) {
+
+        log.info("Fetching reviews for targetType: {}, targetId: {}, page: {}, size: {}", reviewType, targetId, page, size);
+
         Pageable pageable = reviewsPageable(page, size);
+
         return reviewRepository.findByReviewTypeAndTargetId(reviewType, targetId, pageable)
                 .map(this::toResponse);
     }
@@ -80,7 +90,11 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public Page<ReviewResponse> getReviewsByUser(Long userId, int page, int size) {
+
+        log.info("Fetching reviews by userId: {}, page: {}, size: {}", userId, page, size);
+
         Pageable pageable = reviewsPageable(page, size);
+
         return reviewRepository.findByUserId(userId, pageable)
                 .map(this::toResponse);
     }
@@ -88,12 +102,17 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public RatingSummaryResponse getRatingSummary(ReviewType reviewType, Long targetId) {
+
+        log.info("Fetching rating summary for targetType: {}, targetId: {}", reviewType, targetId);
+
         double avg = reviewRepository.findAverageRating(reviewType, targetId)
                 .orElse(0.0);
+
         long total = reviewRepository.countByReviewTypeAndTargetId(reviewType, targetId);
 
-        // Round to 1 decimal place
         double rounded = Math.round(avg * 10.0) / 10.0;
+
+        log.debug("Rating summary calculated - avg: {}, rounded: {}, totalReviews: {}", avg, rounded, total);
 
         return RatingSummaryResponse.builder()
                 .targetId(targetId)
@@ -106,26 +125,26 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public void deleteReview(Long reviewId) {
+
+        log.info("Deleting review with id: {}", reviewId);
+
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+
         reviewRepository.delete(review);
+
         log.info("Review {} deleted by admin", reviewId);
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Validates that the target being reviewed is actually linked to the order.
-     * For example, you cannot review a restaurant that was not part of your order.
-     */
     private void validateTarget(CreateReviewRequest request, Order order) {
+
+        log.debug("Validating target for reviewType: {}, targetId: {}", request.getReviewType(), request.getTargetId());
+
         switch (request.getReviewType()) {
 
             case RESTAURANT -> {
-                // The restaurant being reviewed must be the one the order was placed at
                 if (!order.getRestaurantId().equals(request.getTargetId())) {
+                    log.warn("Invalid restaurant review attempt for orderId: {}", order.getId());
                     throw new BadRequestException("This restaurant was not part of your order");
                 }
                 restaurantRepository.findById(request.getTargetId())
@@ -133,40 +152,52 @@ public class ReviewServiceImpl implements ReviewService {
             }
 
             case MENU_ITEM -> {
-                // The menu item must have been in this order
                 boolean itemInOrder = order.getItems().stream()
                         .anyMatch(item -> item.getMenuItemId().equals(request.getTargetId()));
+
                 if (!itemInOrder) {
+                    log.warn("Invalid menu item review attempt for orderId: {}", order.getId());
                     throw new BadRequestException("This item was not part of your order");
                 }
+
                 menuItemRepository.findById(request.getTargetId())
                         .orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
             }
 
             case DELIVERY_AGENT -> {
-                // The delivery agent must be the one who delivered this order
                 if (order.getDeliveryAgentId() == null) {
+                    log.warn("Review attempted for order without delivery agent, orderId: {}", order.getId());
                     throw new BadRequestException("This order had no delivery agent");
                 }
+
                 if (!order.getDeliveryAgentId().equals(request.getTargetId())) {
+                    log.warn("Invalid delivery agent review attempt for orderId: {}", order.getId());
                     throw new BadRequestException("This delivery agent was not assigned to your order");
                 }
+
                 User agent = userRepository.findByIdAndDeletedAtIsNull(request.getTargetId())
                         .orElseThrow(() -> new ResourceNotFoundException("Delivery agent not found"));
+
                 if (agent.getRole() != Role.DELIVERY_AGENT) {
+                    log.warn("Invalid role for delivery agent review, userId: {}", request.getTargetId());
                     throw new BadRequestException("Target user is not a delivery agent");
                 }
             }
 
-            default -> throw new BadRequestException("Unsupported review type: " + request.getReviewType());
+            default -> {
+                log.warn("Unsupported review type: {}", request.getReviewType());
+                throw new BadRequestException("Unsupported review type: " + request.getReviewType());
+            }
         }
     }
 
     private Pageable reviewsPageable(int page, int size) {
+        log.debug("Creating pageable for page: {}, size: {}", page, size);
         return PagingUtils.pageRequest(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id"));
     }
 
     private ReviewResponse toResponse(Review review) {
+        log.debug("Mapping Review to ReviewResponse for reviewId: {}", review.getId());
         return ReviewResponse.builder()
                 .id(review.getId())
                 .userId(review.getUserId())

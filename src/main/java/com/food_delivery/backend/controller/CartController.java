@@ -11,63 +11,59 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/user/cart")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('USER')")
 public class CartController {
 
-    private final CartService cartService;
-    private final UserService userService;
+	private final CartService cartService;
+	private final UserService userService;
 
-    @PostMapping
-    public ApiResponse<CartResponse> addToCart(
-            @Valid @RequestBody AddToCartRequest request,
-            Authentication authentication
-    ) {
-        Long userId = resolveCurrentUserId(authentication);
-        return ApiResponse.<CartResponse>builder()
-                .success(true)
-                .message("Item added to cart")
-                .data(cartService.addToCart(userId, request))
-                .build();
-    }
+	@PostMapping
+	public ApiResponse<CartResponse> addToCart(@Valid @RequestBody AddToCartRequest request,
+			Authentication authentication) {
 
-    @GetMapping
-    public ApiResponse<CartResponse> getCart(Authentication authentication) {
-        Long userId = resolveCurrentUserId(authentication);
-        return ApiResponse.<CartResponse>builder()
-                .success(true)
-                .message("Cart fetched")
-                .data(cartService.getCart(userId))
-                .build();
-    }
+		Long userId = resolveCurrentUserId(authentication);
+		log.info("User {} adding item {} to cart", userId, request.getMenuItemId());
 
-    @DeleteMapping("/item/{menuItemId}")
-    public ApiResponse<CartResponse> removeItem(
-            Authentication authentication,
-            @PathVariable Long menuItemId
-    ) {
-        Long userId = resolveCurrentUserId(authentication);
-        return ApiResponse.<CartResponse>builder()
-                .success(true)
-                .message("Item removed")
-                .data(cartService.removeItem(userId, menuItemId))
-                .build();
-    }
+		return ApiResponse.<CartResponse>builder().success(true).message("Item added to cart")
+				.data(cartService.addToCart(userId, request)).build();
+	}
 
-    @DeleteMapping("/clear")
-    public ApiResponse<String> clearCart(Authentication authentication) {
-        Long userId = resolveCurrentUserId(authentication);
-        cartService.clearCart(userId);
-        return ApiResponse.<String>builder()
-                .success(true)
-                .message("Cart cleared")
-                .data(null)
-                .build();
-    }
+	@GetMapping
+	public ApiResponse<CartResponse> getCart(Authentication authentication) {
+		Long userId = resolveCurrentUserId(authentication);
+		log.info("Fetching cart for user {}", userId);
 
-    private Long resolveCurrentUserId(Authentication authentication) {
-        return userService.getUserByEmail(authentication.getName()).getId();
-    }
+		return ApiResponse.<CartResponse>builder().success(true).message("Cart fetched")
+				.data(cartService.getCart(userId)).build();
+	}
+
+	@DeleteMapping("/item/{menuItemId}")
+	public ApiResponse<CartResponse> removeItem(Authentication authentication, @PathVariable Long menuItemId) {
+
+		Long userId = resolveCurrentUserId(authentication);
+		log.info("User {} removing item {} from cart", userId, menuItemId);
+
+		return ApiResponse.<CartResponse>builder().success(true).message("Item removed")
+				.data(cartService.removeItem(userId, menuItemId)).build();
+	}
+
+	@DeleteMapping("/clear")
+	public ApiResponse<String> clearCart(Authentication authentication) {
+		Long userId = resolveCurrentUserId(authentication);
+		log.info("User {} clearing cart", userId);
+
+		cartService.clearCart(userId);
+
+		return ApiResponse.<String>builder().success(true).message("Cart cleared").data(null).build();
+	}
+
+	private Long resolveCurrentUserId(Authentication authentication) {
+		return userService.getUserByEmail(authentication.getName()).getId();
+	}
 }

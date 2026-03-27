@@ -29,65 +29,95 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     public RestaurantResponse createRestaurant(CreateRestaurantRequest request, Long ownerId) {
+        log.info("Creating restaurant for ownerId={}", ownerId);
 
         if (restaurantRepository.findByOwnerIdAndActiveTrue(ownerId).isPresent()) {
+            log.error("Restaurant already exists for ownerId={}", ownerId);
             throw new BadRequestException("Restaurant already exists for this owner");
         }
 
         User owner = userRepository.findByIdAndDeletedAtIsNull(ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
+                .orElseThrow(() -> {
+                    log.error("Owner not found with id={}", ownerId);
+                    return new ResourceNotFoundException("Owner not found");
+                });
 
         Restaurant restaurant = RestaurantMapper.toEntity(request);
         restaurant.setOwner(owner);
         restaurant.setStatus(RestaurantStatus.PENDING);
 
         Restaurant saved = restaurantRepository.save(restaurant);
+        log.info("Restaurant created with id={}", saved.getId());
+
         return RestaurantMapper.toResponse(saved);
     }
 
     @Override
     public RestaurantResponse getRestaurant(Long id, Long ownerId) {
+        log.info("Fetching restaurant id={} for ownerId={}", id, ownerId);
 
         Restaurant restaurant = restaurantRepository.findByIdAndOwnerIdAndActiveTrue(id, ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
+                .orElseThrow(() -> {
+                    log.error("Restaurant not found id={}, ownerId={}", id, ownerId);
+                    return new ResourceNotFoundException("Restaurant not found");
+                });
 
         return RestaurantMapper.toResponse(restaurant);
     }
 
     @Override
     public RestaurantResponse updateRestaurant(Long id, CreateRestaurantRequest request, Long ownerId) {
+        log.info("Updating restaurant id={} for ownerId={}", id, ownerId);
 
         Restaurant restaurant = restaurantRepository.findByIdAndOwnerIdAndActiveTrue(id, ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
+                .orElseThrow(() -> {
+                    log.error("Restaurant not found id={}, ownerId={}", id, ownerId);
+                    return new ResourceNotFoundException("Restaurant not found");
+                });
 
         restaurant.setName(request.getName());
         restaurant.setLocation(request.getLocation());
         restaurant.setCuisineType(request.getCuisineType());
 
         Restaurant updated = restaurantRepository.save(restaurant);
+        log.info("Restaurant updated id={}", updated.getId());
+
         return RestaurantMapper.toResponse(updated);
     }
 
     @Override
     public void deleteRestaurant(Long id, Long ownerId) {
+        log.warn("Deleting restaurant id={} for ownerId={}", id, ownerId);
 
         Restaurant restaurant = restaurantRepository.findByIdAndOwnerIdAndActiveTrue(id, ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
+                .orElseThrow(() -> {
+                    log.error("Restaurant not found id={}, ownerId={}", id, ownerId);
+                    return new ResourceNotFoundException("Restaurant not found");
+                });
 
         archiveRestaurant(restaurant);
     }
 
+    private void archiveRestaurant(Restaurant restaurant) {
+        log.info("Archiving restaurant id={}", restaurant.getId());
+
+        restaurant.setActive(false);
+        restaurant.setDeletedAt(LocalDateTime.now());
+        restaurantRepository.save(restaurant);
+    }
+
+    // Remaining methods → just added entry logs
+
     @Override
     public Page<RestaurantResponse> getAllRestaurants(int page, int size) {
-
+        log.info("Fetching all restaurants page={}, size={}", page, size);
         Pageable pageable = PagingUtils.pageRequest(page, size, Sort.by(Sort.Direction.DESC, "id"));
-
-        return restaurantRepository.findAll(pageable)
-                .map(RestaurantMapper::toResponse);
+        return restaurantRepository.findAll(pageable).map(RestaurantMapper::toResponse);
     }
 
     @Override
     public Page<RestaurantResponse> getApprovedRestaurants(String keyword, int page, int size) {
+        log.info("Fetching approved restaurants keyword={}, page={}, size={}", keyword, page, size);
 
         Pageable pageable = PagingUtils.pageRequest(page, size, Sort.by(Sort.Direction.ASC, "name", "id"));
 
@@ -108,6 +138,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     public RestaurantResponse getApprovedRestaurant(Long id) {
+        log.info("Fetching approved restaurant id={}", id);
 
         Restaurant restaurant = restaurantRepository
                 .findByIdAndStatusAndActiveTrue(id, RestaurantStatus.APPROVED)
@@ -118,11 +149,13 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     public Page<RestaurantResponse> searchRestaurants(String keyword, int page, int size) {
+        log.info("Searching restaurants keyword={}", keyword);
         return getApprovedRestaurants(keyword, page, size);
     }
 
     @Override
     public Page<RestaurantResponse> getPendingRestaurants(int page, int size) {
+        log.info("Fetching pending restaurants page={}, size={}", page, size);
 
         Pageable pageable = PagingUtils.pageRequest(page, size, Sort.by(Sort.Direction.DESC, "id"));
 
@@ -133,11 +166,13 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     public void approveRestaurant(Long id) {
+        log.info("Approving restaurant id={}", id);
 
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         if (!restaurant.isActive()) {
+            log.error("Attempt to approve archived restaurant id={}", id);
             throw new BadRequestException("Archived restaurants cannot be approved");
         }
 
@@ -147,6 +182,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     @Override
     public void rejectRestaurant(Long id) {
+        log.warn("Rejecting restaurant id={}", id);
 
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
@@ -154,12 +190,6 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setStatus(RestaurantStatus.REJECTED);
         restaurant.setActive(false);
 
-        restaurantRepository.save(restaurant);
-    }
-
-    private void archiveRestaurant(Restaurant restaurant) {
-        restaurant.setActive(false);
-        restaurant.setDeletedAt(LocalDateTime.now());
         restaurantRepository.save(restaurant);
     }
 }
