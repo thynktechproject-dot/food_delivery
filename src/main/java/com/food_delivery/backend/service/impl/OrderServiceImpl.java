@@ -472,7 +472,7 @@ public class OrderServiceImpl implements OrderService {
 			throw new ResourceNotFoundException("Restaurant not found");
 		}
 
-		List<OrderStatus> completedStatuses = List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+		List<OrderStatus> completedStatuses = List.of(OrderStatus.values());
 
 		return orderRepository.findByRestaurantIdAndOrderStatusIn(restaurantId, completedStatuses,
 				PageRequest.of(0, 10, Sort.by("createdAt").descending())).getContent().stream().map(order -> {
