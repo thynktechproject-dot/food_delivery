@@ -9,9 +9,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/api/owner/dashboard")
 @RequiredArgsConstructor
+@Slf4j
 public class OwnerDashboardController {
 
     private final OwnerDashboardService dashboardService;
@@ -20,6 +23,8 @@ public class OwnerDashboardController {
     public ResponseEntity<ApiResponse<TodaySummaryResponse>> getTodaySummary(
             @PathVariable Long restaurantId
     ) {
+        log.info("GET /api/owner/dashboard/today/{} called", restaurantId);
+        log.debug("Fetching today's summary for restaurantId: {}", restaurantId);
 
         TodaySummaryResponse data = dashboardService.getTodaySummary(restaurantId);
 
@@ -29,6 +34,8 @@ public class OwnerDashboardController {
                 .data(data)
                 .build();
 
+        log.debug("Today's summary fetched successfully for restaurantId: {}", restaurantId);
+
         return ResponseEntity.ok(response);
     }
     
@@ -36,6 +43,8 @@ public class OwnerDashboardController {
     public ResponseEntity<ApiResponse<WeeklySummaryResponse>> getWeeklySummary(
             @PathVariable Long restaurantId
     ) {
+        log.info("GET /api/owner/dashboard/weekly/{} called", restaurantId);
+        log.debug("Fetching weekly summary for restaurantId: {}", restaurantId);
 
         WeeklySummaryResponse data = dashboardService.getWeeklySummary(restaurantId);
 
@@ -45,6 +54,8 @@ public class OwnerDashboardController {
                 .data(data)
                 .build();
 
+        log.debug("Weekly summary fetched successfully for restaurantId: {}", restaurantId);
+
         return ResponseEntity.ok(response);
     }
     
@@ -52,6 +63,8 @@ public class OwnerDashboardController {
     public ResponseEntity<ApiResponse<MonthlySummaryResponse>> getMonthlySummary(
             @PathVariable Long restaurantId
     ) {
+        log.info("GET /api/owner/dashboard/monthly/{} called", restaurantId);
+        log.debug("Fetching monthly summary for restaurantId: {}", restaurantId);
 
         MonthlySummaryResponse data = dashboardService.getMonthlySummary(restaurantId);
 
@@ -60,6 +73,8 @@ public class OwnerDashboardController {
                 .message("Monthly summary fetched successfully")
                 .data(data)
                 .build();
+
+        log.debug("Monthly summary fetched successfully for restaurantId: {}", restaurantId);
 
         return ResponseEntity.ok(response);
     }

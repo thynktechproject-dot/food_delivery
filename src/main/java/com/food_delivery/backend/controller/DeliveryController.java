@@ -20,11 +20,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/delivery")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('DELIVERY_AGENT')")
+@Slf4j
 public class DeliveryController {
 
     private final OrderService orderService;
@@ -34,14 +36,17 @@ public class DeliveryController {
     // Existing endpoints
     // -------------------------------------------------------------------------
 
-    /** All orders ever assigned to the calling delivery agent (paginated). */
     @GetMapping("/orders")
     public ApiResponse<Page<OrderResponse>> getAssignedOrders(
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        log.info("GET /api/delivery/orders called by user: {}", authentication.getName());
+
         Long agentId = resolveCurrentUserId(authentication);
+        log.debug("Fetching assigned orders for agentId: {}, page: {}, size: {}", agentId, page, size);
+
         return ApiResponse.<Page<OrderResponse>>builder()
                 .success(true)
                 .message("Assigned orders fetched")
@@ -49,13 +54,16 @@ public class DeliveryController {
                 .build();
     }
 
-    /** Single order detail — only accessible if it is assigned to the calling agent. */
     @GetMapping("/orders/{orderId}")
     public ApiResponse<OrderResponse> getOrder(
             @PathVariable Long orderId,
             Authentication authentication
     ) {
+        log.info("GET /api/delivery/orders/{} called by user: {}", orderId, authentication.getName());
+
         Long agentId = resolveCurrentUserId(authentication);
+        log.debug("Fetching orderId: {} for agentId: {}", orderId, agentId);
+
         return ApiResponse.<OrderResponse>builder()
                 .success(true)
                 .message("Order fetched")
@@ -63,13 +71,15 @@ public class DeliveryController {
                 .build();
     }
 
-    /** Update the delivery status of an assigned order (PREPARING → OUT_FOR_DELIVERY → DELIVERED). */
     @PutMapping("/orders/{orderId}/status")
     public ApiResponse<OrderResponse> updateDeliveryStatus(
             @PathVariable Long orderId,
             @RequestParam OrderStatus status,
             Authentication authentication
     ) {
+        log.info("PUT /api/delivery/orders/{}/status called by user: {}", orderId, authentication.getName());
+        log.debug("Updating status for orderId: {} to {}", orderId, status);
+
         return ApiResponse.<OrderResponse>builder()
                 .success(true)
                 .message("Delivery status updated")
@@ -81,17 +91,17 @@ public class DeliveryController {
     // New endpoints
     // -------------------------------------------------------------------------
 
-    /**
-     * Active orders only — those currently PREPARING or OUT_FOR_DELIVERY.
-     * Intended for the agent's live "on-the-road" view.
-     */
     @GetMapping("/orders/active")
     public ApiResponse<Page<OrderResponse>> getActiveOrders(
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        log.info("GET /api/delivery/orders/active called by user: {}", authentication.getName());
+
         Long agentId = resolveCurrentUserId(authentication);
+        log.debug("Fetching active orders for agentId: {}, page: {}, size: {}", agentId, page, size);
+
         return ApiResponse.<Page<OrderResponse>>builder()
                 .success(true)
                 .message("Active orders fetched")
@@ -99,17 +109,17 @@ public class DeliveryController {
                 .build();
     }
 
-    /**
-     * Delivery history — orders with status DELIVERED, sorted newest-first.
-     * Useful for the agent's earnings/history screen.
-     */
     @GetMapping("/orders/history")
     public ApiResponse<Page<OrderResponse>> getDeliveryHistory(
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        log.info("GET /api/delivery/orders/history called by user: {}", authentication.getName());
+
         Long agentId = resolveCurrentUserId(authentication);
+        log.debug("Fetching delivery history for agentId: {}, page: {}, size: {}", agentId, page, size);
+
         return ApiResponse.<Page<OrderResponse>>builder()
                 .success(true)
                 .message("Delivery history fetched")
@@ -117,12 +127,13 @@ public class DeliveryController {
                 .build();
     }
 
-    /**
-     * Personal stats dashboard: total assigned, currently active, total delivered.
-     */
     @GetMapping("/stats")
     public ApiResponse<DeliveryStatsResponse> getStats(Authentication authentication) {
+        log.info("GET /api/delivery/stats called by user: {}", authentication.getName());
+
         Long agentId = resolveCurrentUserId(authentication);
+        log.debug("Fetching stats for agentId: {}", agentId);
+
         return ApiResponse.<DeliveryStatsResponse>builder()
                 .success(true)
                 .message("Delivery stats fetched")
@@ -130,22 +141,26 @@ public class DeliveryController {
                 .build();
     }
 
-    /**
-     * Allows the delivery agent to mark themselves available or unavailable.
-     * When unavailable, admins will not assign new orders to them.
-     */
     @PutMapping("/availability")
     public ApiResponse<UserResponse> updateAvailability(
             @Valid @RequestBody UpdateAvailabilityRequest request,
             Authentication authentication
     ) {
+        log.info("PUT /api/delivery/availability called by user: {}", authentication.getName());
+        log.debug("Updating availability to: {}", request.getAvailable());
+
         Long agentId = resolveCurrentUserId(authentication);
+
         if (Boolean.TRUE.equals(request.getAvailable())) {
+            log.debug("Activating agentId: {}", agentId);
             userService.activateAgent(agentId);
         } else {
+            log.debug("Deactivating agentId: {}", agentId);
             userService.deactivateAgent(agentId);
         }
+
         UserResponse updated = userService.getUserById(agentId);
+
         return ApiResponse.<UserResponse>builder()
                 .success(true)
                 .message("Availability updated")
@@ -153,11 +168,8 @@ public class DeliveryController {
                 .build();
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
     private Long resolveCurrentUserId(Authentication authentication) {
+        log.debug("Resolving userId for email: {}", authentication.getName());
         return userService.getUserByEmail(authentication.getName()).getId();
     }
 }
