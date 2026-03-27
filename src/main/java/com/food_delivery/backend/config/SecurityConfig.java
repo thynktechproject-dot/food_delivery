@@ -63,6 +63,8 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/auth/login",
                                 "/api/auth/register/user",
+                                "/api/auth/register/restaurant-owner",
+                                "/api/auth/register/delivery-agent",
                                 "/api/auth/refresh",
                                 "/api/auth/logout"
                         )

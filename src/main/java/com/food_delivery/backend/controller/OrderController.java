@@ -16,9 +16,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/api/user/orders")
 @RequiredArgsConstructor
+@Slf4j
 public class OrderController {
 
     private final OrderService orderService;
@@ -27,7 +30,11 @@ public class OrderController {
     @PostMapping
     @PreAuthorize("hasRole('USER')")
     public ApiResponse<OrderResponse> placeOrder(Authentication authentication) {
+        log.info("POST /api/user/orders called by user: {}", authentication.getName());
+
         Long userId = resolveCurrentUserId(authentication);
+        log.debug("Placing order for userId: {}", userId);
+
         return ApiResponse.<OrderResponse>builder()
                 .success(true)
                 .message("Order placed successfully")
@@ -38,7 +45,11 @@ public class OrderController {
     @GetMapping("/{orderId}")
     @PreAuthorize("hasRole('USER')")
     public ApiResponse<OrderResponse> getOrder(@PathVariable Long orderId, Authentication authentication) {
+        log.info("GET /api/user/orders/{} called by user: {}", orderId, authentication.getName());
+
         Long userId = resolveCurrentUserId(authentication);
+        log.debug("Fetching orderId: {} for userId: {}", orderId, userId);
+
         return ApiResponse.<OrderResponse>builder()
                 .success(true)
                 .message("Order fetched successfully")
@@ -53,7 +64,11 @@ public class OrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        log.info("GET /api/user/orders/me called by user: {}", authentication.getName());
+
         Long userId = resolveCurrentUserId(authentication);
+        log.debug("Fetching orders for userId: {}, page: {}, size: {}", userId, page, size);
+
         return ApiResponse.<Page<OrderResponse>>builder()
                 .success(true)
                 .message("Orders fetched successfully")
@@ -68,6 +83,9 @@ public class OrderController {
             @RequestParam OrderStatus status,
             Authentication authentication
     ) {
+        log.info("PUT /api/user/orders/{}/status called by user: {}", orderId, authentication.getName());
+        log.debug("Updating orderId: {} to status: {}", orderId, status);
+
         return ApiResponse.<OrderResponse>builder()
                 .success(true)
                 .message("Order status updated")
@@ -76,18 +94,22 @@ public class OrderController {
     }
 
     private Long resolveCurrentUserId(Authentication authentication) {
+        log.debug("Resolving userId for email: {}", authentication.getName());
         return userService.getUserByEmail(authentication.getName()).getId();
     }
     
- // LIVE ORDER QUEUE
+    // LIVE ORDER QUEUE
     @GetMapping("/live")
     @PreAuthorize("hasAnyRole('ADMIN','RESTAURANT_OWNER')")
     public ApiResponse<List<LiveOrderResponse>> getLiveOrders(
             @RequestParam Long restaurantId
     ) {
+        log.info("GET /api/user/orders/live called for restaurantId: {}", restaurantId);
 
         List<LiveOrderResponse> liveOrders =
                 orderService.getLiveOrders(restaurantId);
+
+        log.debug("Fetched {} live orders for restaurantId: {}", liveOrders.size(), restaurantId);
 
         return ApiResponse.<List<LiveOrderResponse>>builder()
                 .success(true)
@@ -102,9 +124,12 @@ public class OrderController {
     public ApiResponse<List<RecentOrderResponse>> getRecentOrders(
             @RequestParam Long restaurantId
     ) {
+        log.info("GET /api/user/orders/recent called for restaurantId: {}", restaurantId);
 
         List<RecentOrderResponse> recentOrders =
                 orderService.getRecentOrders(restaurantId);
+
+        log.debug("Fetched {} recent orders for restaurantId: {}", recentOrders.size(), restaurantId);
 
         return ApiResponse.<List<RecentOrderResponse>>builder()
                 .success(true)
@@ -112,5 +137,4 @@ public class OrderController {
                 .data(recentOrders)
                 .build();
     }
-
 }
